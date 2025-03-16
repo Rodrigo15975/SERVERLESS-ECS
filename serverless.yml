@@ -27,7 +27,6 @@ package:
 
 functions:
   handler:
-    image: 222634373780.dkr.ecr.us-east-1.amazonaws.com/serverless-docker:v2
     events:
       - httpApi:
           path: /{proxy+}
