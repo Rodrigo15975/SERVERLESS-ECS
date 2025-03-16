@@ -1,0 +1,428 @@
+{
+  "service": {
+    "service": "app-dockerfile-development",
+    "serviceObject": {
+      "name": "app-dockerfile-development"
+    },
+    "provider": {
+      "name": "aws",
+      "logRetentionInDays": 7,
+      "stage": "development",
+      "region": "us-east-1",
+      "timeout": 15,
+      "apiGateway": {
+        "shouldStartNameWithService": true
+      },
+      "memorySize": 128,
+      "versionFunctions": true,
+      "compiledCloudFormationTemplate": {
+        "AWSTemplateFormatVersion": "2010-09-09",
+        "Description": "The AWS CloudFormation template for this Serverless application",
+        "Resources": {
+          "HandlerLogGroup": {
+            "Type": "AWS::Logs::LogGroup",
+            "Properties": {
+              "LogGroupName": "/aws/lambda/app-dockerfile-development-development-handler",
+              "RetentionInDays": 7
+            }
+          },
+          "IamRoleLambdaExecution": {
+            "Type": "AWS::IAM::Role",
+            "Properties": {
+              "AssumeRolePolicyDocument": {
+                "Version": "2012-10-17",
+                "Statement": [
+                  {
+                    "Effect": "Allow",
+                    "Principal": {
+                      "Service": [
+                        "lambda.amazonaws.com"
+                      ]
+                    },
+                    "Action": [
+                      "sts:AssumeRole"
+                    ]
+                  }
+                ]
+              },
+              "Policies": [
+                {
+                  "PolicyName": {
+                    "Fn::Join": [
+                      "-",
+                      [
+                        "app-dockerfile-development",
+                        "development",
+                        "lambda"
+                      ]
+                    ]
+                  },
+                  "PolicyDocument": {
+                    "Version": "2012-10-17",
+                    "Statement": [
+                      {
+                        "Effect": "Allow",
+                        "Action": [
+                          "logs:CreateLogStream",
+                          "logs:CreateLogGroup",
+                          "logs:TagResource"
+                        ],
+                        "Resource": [
+                          {
+                            "Fn::Sub": "arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/app-dockerfile-development-development*:*"
+                          }
+                        ]
+                      },
+                      {
+                        "Effect": "Allow",
+                        "Action": [
+                          "logs:PutLogEvents"
+                        ],
+                        "Resource": [
+                          {
+                            "Fn::Sub": "arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/app-dockerfile-development-development*:*:*"
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                }
+              ],
+              "Path": "/",
+              "RoleName": {
+                "Fn::Join": [
+                  "-",
+                  [
+                    "app-dockerfile-development",
+                    "development",
+                    {
+                      "Ref": "AWS::Region"
+                    },
+                    "lambdaRole"
+                  ]
+                ]
+              }
+            }
+          },
+          "HandlerLambdaFunction": {
+            "Type": "AWS::Lambda::Function",
+            "Properties": {
+              "Code": {
+                "ImageUri": "222634373780.dkr.ecr.us-east-1.amazonaws.com/serverless-docker@sha256:0e23a7d0c91b4768f8bbc28f5f307bceceaf02f1ce0585b5b8f6a01c545ae2d7"
+              },
+              "PackageType": "Image",
+              "FunctionName": "app-dockerfile-development-development-handler",
+              "MemorySize": 128,
+              "Timeout": 15,
+              "Role": {
+                "Fn::GetAtt": [
+                  "IamRoleLambdaExecution",
+                  "Arn"
+                ]
+              }
+            },
+            "DependsOn": [
+              "HandlerLogGroup"
+            ]
+          },
+          "HandlerLambdaVersionQinENuSmmquIYxe6zJERGSlxWrqBzCEe3ZzVeeppWQ": {
+            "Type": "AWS::Lambda::Version",
+            "DeletionPolicy": "Retain",
+            "Properties": {
+              "FunctionName": {
+                "Ref": "HandlerLambdaFunction"
+              },
+              "CodeSha256": "0e23a7d0c91b4768f8bbc28f5f307bceceaf02f1ce0585b5b8f6a01c545ae2d7"
+            }
+          },
+          "HttpApi": {
+            "Type": "AWS::ApiGatewayV2::Api",
+            "Properties": {
+              "Name": "development-app-dockerfile-development",
+              "ProtocolType": "HTTP"
+            }
+          },
+          "HttpApiStage": {
+            "Type": "AWS::ApiGatewayV2::Stage",
+            "Properties": {
+              "ApiId": {
+                "Ref": "HttpApi"
+              },
+              "StageName": "$default",
+              "AutoDeploy": true,
+              "DefaultRouteSettings": {
+                "DetailedMetricsEnabled": false
+              }
+            }
+          },
+          "HandlerLambdaPermissionHttpApi": {
+            "Type": "AWS::Lambda::Permission",
+            "Properties": {
+              "FunctionName": {
+                "Fn::GetAtt": [
+                  "HandlerLambdaFunction",
+                  "Arn"
+                ]
+              },
+              "Action": "lambda:InvokeFunction",
+              "Principal": "apigateway.amazonaws.com",
+              "SourceArn": {
+                "Fn::Join": [
+                  "",
+                  [
+                    "arn:",
+                    {
+                      "Ref": "AWS::Partition"
+                    },
+                    ":execute-api:",
+                    {
+                      "Ref": "AWS::Region"
+                    },
+                    ":",
+                    {
+                      "Ref": "AWS::AccountId"
+                    },
+                    ":",
+                    {
+                      "Ref": "HttpApi"
+                    },
+                    "/*"
+                  ]
+                ]
+              }
+            }
+          },
+          "HttpApiIntegrationHandler": {
+            "Type": "AWS::ApiGatewayV2::Integration",
+            "Properties": {
+              "ApiId": {
+                "Ref": "HttpApi"
+              },
+              "IntegrationType": "AWS_PROXY",
+              "IntegrationUri": {
+                "$ref": "$[\"service\"][\"provider\"][\"compiledCloudFormationTemplate\"][\"Resources\"][\"HandlerLambdaPermissionHttpApi\"][\"Properties\"][\"FunctionName\"]"
+              },
+              "PayloadFormatVersion": "2.0",
+              "TimeoutInMillis": 30000
+            }
+          },
+          "HttpApiRouteAnyProxyVar": {
+            "Type": "AWS::ApiGatewayV2::Route",
+            "Properties": {
+              "ApiId": {
+                "Ref": "HttpApi"
+              },
+              "RouteKey": "ANY /{proxy+}",
+              "Target": {
+                "Fn::Join": [
+                  "/",
+                  [
+                    "integrations",
+                    {
+                      "Ref": "HttpApiIntegrationHandler"
+                    }
+                  ]
+                ]
+              }
+            },
+            "DependsOn": "HttpApiIntegrationHandler"
+          }
+        },
+        "Outputs": {
+          "ServerlessDeploymentBucketName": {
+            "Value": "serverless-framework-deployments-us-east-1-01365d90-98ab",
+            "Export": {
+              "Name": "sls-app-dockerfile-development-development-ServerlessDeploymentBucketName"
+            }
+          },
+          "HandlerLambdaFunctionQualifiedArn": {
+            "Description": "Current Lambda function version",
+            "Value": {
+              "Ref": "HandlerLambdaVersionQinENuSmmquIYxe6zJERGSlxWrqBzCEe3ZzVeeppWQ"
+            },
+            "Export": {
+              "Name": "sls-app-dockerfile-development-development-HandlerLambdaFunctionQualifiedArn"
+            }
+          },
+          "HttpApiId": {
+            "Description": "Id of the HTTP API",
+            "Value": {
+              "Ref": "HttpApi"
+            },
+            "Export": {
+              "Name": "sls-app-dockerfile-development-development-HttpApiId"
+            }
+          },
+          "HttpApiUrl": {
+            "Description": "URL of the HTTP API",
+            "Value": {
+              "Fn::Join": [
+                "",
+                [
+                  "https://",
+                  {
+                    "Ref": "HttpApi"
+                  },
+                  ".execute-api.",
+                  {
+                    "Ref": "AWS::Region"
+                  },
+                  ".",
+                  {
+                    "Ref": "AWS::URLSuffix"
+                  }
+                ]
+              ]
+            },
+            "Export": {
+              "Name": "sls-app-dockerfile-development-development-HttpApiUrl"
+            }
+          }
+        }
+      },
+      "vpc": {}
+    },
+    "custom": {
+      "prune": {
+        "automatic": true,
+        "number": 1
+      }
+    },
+    "plugins": [
+      "serverless-plugin-common-excludes",
+      "serverless-offline"
+    ],
+    "pluginsData": {},
+    "functions": {
+      "handler": {
+        "image": "222634373780.dkr.ecr.us-east-1.amazonaws.com/serverless-docker:v2",
+        "events": [
+          {
+            "httpApi": {
+              "path": "/{proxy+}",
+              "method": "any"
+            },
+            "resolvedMethod": "ANY",
+            "resolvedPath": "/{proxy+}"
+          }
+        ],
+        "name": "app-dockerfile-development-development-handler",
+        "package": {},
+        "memory": 128,
+        "timeout": 15,
+        "vpc": {},
+        "versionLogicalId": "HandlerLambdaVersionQinENuSmmquIYxe6zJERGSlxWrqBzCEe3ZzVeeppWQ"
+      }
+    },
+    "configValidationMode": "error",
+    "serviceFilename": "serverless",
+    "initialServerlessConfig": {
+      "service": "app-dockerfile-development",
+      "configValidationMode": "error",
+      "custom": {
+        "$ref": "$[\"service\"][\"custom\"]"
+      },
+      "provider": {
+        "$ref": "$[\"service\"][\"provider\"]"
+      },
+      "package": {
+        "individually": true,
+        "excludeDevDependencies": false,
+        "patterns": [
+          "dist/**",
+          "!node_modules/**",
+          "!.gitignore",
+          "!.gitconfig",
+          "!.editorconfig",
+          "!.eslintignore",
+          "!.eslintrc",
+          "!.npmrc",
+          "!.nycrc",
+          "!.npmignore",
+          "!*coveralls.yml",
+          "!.circleci/**",
+          "!*circle.yml",
+          "!*travis.yml",
+          "!.gitlab-ci.yml",
+          "!*.md",
+          "!*.apib",
+          "!.vscode/**",
+          "!package-lock.json",
+          "!.npm-upgrade.json",
+          "!sonar-project.properties",
+          "!sonar-coverage.info",
+          "!rollup.config.*",
+          "!yarn.lock",
+          "!coverage/**",
+          "!.nyc_output/**",
+          "!docs/**",
+          "!test/**",
+          "!tests/**",
+          "!CODEOWNERS",
+          "!node_modules/**/*.md",
+          "!node_modules/**/*.flow",
+          "!node_modules/**/*.patch",
+          "!node_modules/**/*.conf",
+          "!node_modules/**/*.markdown",
+          "!node_modules/**/*.coffee",
+          "!node_modules/**/jsdoc_conf.json",
+          "!node_modules/**/*Makefile",
+          "!node_modules/**/Dockerfile",
+          "!node_modules/**/*.txt",
+          "!node_modules/**/*.yml",
+          "!node_modules/**/*.xml",
+          "!node_modules/**/*.html",
+          "!node_modules/**/test/**",
+          "!node_modules/**/tests/**",
+          "!node_modules/**/examples/**",
+          "!node_modules/**/coverage/**",
+          "!node_modules/**/.nyc_output/**",
+          "!node_modules/**/bin/**",
+          "!node_modules/**/bower.json",
+          "!node_modules/**/karma.conf.js",
+          "!node_modules/**/Gruntfile.js",
+          "!node_modules/**/rollup.config.*",
+          "!node_modules/**/yarn.lock",
+          "!node_modules/**/sonar-project.properties",
+          "!node_modules/**/package-lock.json",
+          "!node_modules/**/*.d.ts",
+          "!node_modules/**/*.map",
+          "!node_modules/**/tsconfig.json",
+          "!node_modules/**/AUTHORS",
+          "!node_modules/**/CODEOWNERS",
+          "!node_modules/**/OWNERS",
+          "!node_modules/**/*.iml",
+          "!node_module/**/*.bash_completion.in",
+          "!node_modules/**/*.gif",
+          "!node_modules/**/*.png",
+          "!node_modules/**/*.jpg",
+          "!node_modules/**/*.jpeg",
+          "!node_modules/**/winston/scratch/**",
+          "!node_modules/**/sshpk/man/**",
+          "!node_modules/**/bluebird/js/browser/**",
+          "!node_modules/**/date-fns/docs.json",
+          "!node_modules/**/aws-xray-sdk-core/doc-src/**",
+          "!node_modules/**/aws-sdk/dist/**",
+          "!node_modules/**/aws-sdk/dist-tools/**"
+        ],
+        "artifactsS3KeyDirname": "serverless/app-dockerfile-development/development/code-artifacts",
+        "deploymentBucket": "serverless-framework-deployments-us-east-1-01365d90-98ab",
+        "artifactDirectoryName": "serverless/app-dockerfile-development/development/1742097484618-2025-03-16T03:58:04.618Z"
+      },
+      "functions": {
+        "$ref": "$[\"service\"][\"functions\"]"
+      },
+      "plugins": {
+        "$ref": "$[\"service\"][\"plugins\"]"
+      }
+    },
+    "appId": null,
+    "orgId": null,
+    "layers": {}
+  },
+  "package": {
+    "individually": true,
+    "artifactDirectoryName": "serverless/app-dockerfile-development/development/1742097484618-2025-03-16T03:58:04.618Z",
+    "artifact": ""
+  }
+}

@@ -1,0 +1,38 @@
+service: app-dockerfile-${opt:stage, 'development'}
+
+configValidationMode: error
+
+custom:
+  prune:
+    automatic: true
+    number: 1
+
+provider:
+  name: aws
+  logRetentionInDays: 7
+  # runtime: nodejs20.x
+  stage: ${opt:stage, 'development'}
+  region: us-east-1
+  timeout: 15
+  apiGateway:
+    shouldStartNameWithService: true
+  memorySize: 128
+
+package:
+  individually: true
+  excludeDevDependencies: false
+  patterns:
+    - "dist/**"
+    - "!node_modules/**"
+
+functions:
+  handler:
+    image: 222634373780.dkr.ecr.us-east-1.amazonaws.com/serverless-docker:v2
+    events:
+      - httpApi:
+          path: /{proxy+}
+          method: any
+
+plugins:
+  - serverless-plugin-common-excludes
+  - serverless-offline
